@@ -2,7 +2,7 @@
 
 Lightweight, localhost-only web UI for bulk web directory enumeration during penetration tests. Single Go binary, minimal dependencies, no authentication, results + progress streamed live.
 
-![webtruder web gui](./screenshot.png)
+
 
 ## What it does
 - Enumerates paths from a wordlist across many HTTP(S) targets
