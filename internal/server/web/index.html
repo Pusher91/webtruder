@@ -248,7 +248,8 @@ http://intranet.local</textarea>
             <div class="px-4 py-3 border-b border-slate-800 bg-slate-950 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
                     <div class="text-xs text-slate-500">Viewing</div>
-                    <div id="activeScanTitle" class="text-base font-semibold text-slate-100 truncate">No scan selected</div>
+                    <div id="activeScanTitle" class="text-base font-semibold text-slate-100 truncate">No scan selected
+                    </div>
                 </div>
                 <div id="activeScanMeta" class="text-xs text-slate-400 sm:text-right"></div>
             </div>
@@ -306,7 +307,8 @@ http://intranet.local</textarea>
                                 </div>
                                 <div id="runningOverallText" class="text-xs text-slate-400 w-10 text-right">0%</div>
                             </div>
-                            <div id="runningMeta" class="text-xs text-slate-500 w-fit m-auto">0/0 requests - 0 req/s</div>
+                            <div id="runningMeta" class="text-xs text-slate-500 w-fit m-auto">0/0 requests - 0 req/s
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -346,115 +348,113 @@ http://intranet.local</textarea>
                         <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
                     </summary>
 
-                    <div class="p-4 border-b border-slate-800 bg-slate-950 space-y-3">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                            <div class="md:col-span-5 space-y-1">
-                                <div class="text-sm text-slate-300">Search</div>
-                                <input id="findingsSearch"
-                                       placeholder="tokens match URL/host/path (space = AND)"
-                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
-                            </div>
+                    <div class="p-4 border-b border-slate-800 bg-slate-950 space-y-4">
 
-                            <div class="md:col-span-3 space-y-1">
-                                <div class="text-sm text-slate-300">Host</div>
-                                <input id="findingsHost"
-                                       placeholder="example.com"
-                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
-                            </div>
-
-                            <div class="md:col-span-3 space-y-1">
-                                <div class="text-sm text-slate-300">Path</div>
-                                <input id="findingsPath"
-                                       placeholder="/.git"
-                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
-                            </div>
-
-                            <div class="md:col-span-1">
-                                <button id="findingsClearFiltersBtn" type="button"
-                                        class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300">
-                                    Clear
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
-                            <div class="md:col-span-8 space-y-2">
-                                <div class="flex items-start justify-between gap-3 flex-wrap">
-                                    <div class="flex items-start gap-2 flex-wrap">
-                                        <div class="text-sm text-slate-300 flex items-center gap-2">
-                                            Exclude status codes
-                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
-                                                  title="Examples: 404,403  300-399  4xx  !404 (re-include). Tokens can be separated by commas or spaces.">i</span>
-                                        </div>
-
-                                        <input
-                                                id="findingsStatusExcludeInput"
-                                                placeholder="e.g. 404,403 300-399 4xx !404"
-                                                class="w-64 p-2 rounded bg-slate-950 border border-slate-800 text-sm"
-                                                spellcheck="false"
-                                                autocomplete="off"
-                                        />
-
-                                        <button id="findingsStatusExcludeClearBtn" type="button"
-                                                class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-950"
-                                                disabled>
-                                            Clear
-                                        </button>
-
-                                        <div id="findingsFilterHint" class="text-xs text-slate-400 whitespace-nowrap"></div>
-                                    </div>
-
-<!--                                    <div class="text-xs text-slate-500">-->
-<!--                                        Examples:-->
-<!--                                        <span class="font-mono">404</span>-->
-<!--                                        <span class="font-mono">300-399</span>-->
-<!--                                        <span class="font-mono">4xx</span>-->
-<!--                                        <span class="font-mono">!404</span>-->
-<!--                                    </div>-->
-                                </div>
-
-                                <div id="findingsStatusExcludeErr" class="text-xs text-red-400 hidden"></div>
-
-                                <div id="findingsExcludedStatuses" class="flex flex-wrap gap-2"></div>
-                            </div>
-
-                            <div class="md:col-span-4 space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="text-sm text-slate-300 flex items-center gap-2">
-                                        Exclude lengths
-                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
-                                              title="Exclude exact response lengths. Tokens separated by commas or spaces. Use !LEN to re-include.">i</span>
-                                    </div>
-
-                                    <button id="findingsLengthExcludeClearBtn" type="button"
-                                            class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-950"
-                                            disabled>
-                                        Clear
-                                    </button>
-                                </div>
-
+                        <!-- Search row -->
+                        <div class="flex flex-col md:flex-row md:items-end gap-3">
+                            <div class="flex-1 min-w-0 space-y-1">
+                                <label for="findingsSearch" class="text-sm text-slate-300">Search</label>
                                 <input
-                                        id="findingsLengthExcludeInput"
-                                        placeholder="e.g. 0, 1234  2048  !1234"
-                                        class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"
+                                        id="findingsSearch"
+                                        placeholder="tokens match URL/host/path"
+                                        class="w-full h-10 px-3 rounded bg-slate-950 border border-slate-800 text-sm font-mono
+                           focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/40"
                                         spellcheck="false"
                                         autocomplete="off"
+                                        autocapitalize="off"
+                                        autocorrect="off"
                                 />
-
-<!--                                <div class="text-xs text-slate-500">-->
-<!--                                    Examples:-->
-<!--                                    <span class="font-mono">0</span>-->
-<!--                                    <span class="font-mono">1234</span>-->
-<!--                                    <span class="font-mono">!1234</span>-->
-<!--                                </div>-->
-
-                                <div id="findingsLengthExcludeErr" class="text-xs text-red-400 hidden"></div>
-                                <div id="findingsExcludedLengths" class="flex flex-wrap gap-2"></div>
+                                <div class="text-xs text-slate-500">Space = AND</div>
                             </div>
+
+                            <button id="findingsClearFiltersBtn" type="button"
+                                    class="h-10 px-4 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300">
+                                Clear
+                            </button>
+                        </div>
+
+                        <!-- Filters grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            <!-- Status codes -->
+                            <div class="rounded border border-slate-800 bg-slate-900/40 p-3 space-y-3">
+                                <div class="text-sm font-semibold text-slate-200">Status codes</div>
+
+                                <div class="space-y-1">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Include
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Whitelist status codes (optional). Examples: 200,302  2xx  300-399. Tokens separated by commas or spaces.">i</span>
+                                    </div>
+                                    <input
+                                            id="findingsStatusIncludeInput"
+                                            placeholder="e.g. 2xx 300-399 200,302"
+                                            class="w-full h-10 px-3 rounded bg-slate-950 border border-slate-800 text-sm font-mono"
+                                            spellcheck="false"
+                                            autocomplete="off"
+                                    />
+                                    <div id="findingsStatusIncludeErr" class="text-xs text-red-400 hidden"></div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Exclude
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Blacklist status codes. Examples: 404,403  300-399  4xx. Tokens separated by commas or spaces. (Legacy: !404 in this box is treated as include).">i</span>
+                                    </div>
+                                    <input
+                                            id="findingsStatusExcludeInput"
+                                            placeholder="e.g. 404,403 300-399 4xx"
+                                            class="w-full h-10 px-3 rounded bg-slate-950 border border-slate-800 text-sm font-mono"
+                                            spellcheck="false"
+                                            autocomplete="off"
+                                    />
+                                    <div id="findingsStatusExcludeErr" class="text-xs text-red-400 hidden"></div>
+                                </div>
+                            </div>
+
+                            <!-- Lengths -->
+                            <div class="rounded border border-slate-800 bg-slate-900/40 p-3 space-y-3">
+                                <div class="text-sm font-semibold text-slate-200">Response length</div>
+
+                                <div class="space-y-1">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Include
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Whitelist response lengths (optional). Examples: 0  1234  100-200. Tokens separated by commas or spaces.">i</span>
+                                    </div>
+                                    <input
+                                            id="findingsLengthIncludeInput"
+                                            placeholder="e.g. 0 100-200 1234"
+                                            class="w-full h-10 px-3 rounded bg-slate-950 border border-slate-800 text-sm font-mono"
+                                            spellcheck="false"
+                                            autocomplete="off"
+                                    />
+                                    <div id="findingsLengthIncludeErr" class="text-xs text-red-400 hidden"></div>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Exclude
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Blacklist response lengths. Examples: 0  1234  100-200. Tokens separated by commas or spaces. (Legacy: !LEN in this box is treated as include).">i</span>
+                                    </div>
+                                    <input
+                                            id="findingsLengthExcludeInput"
+                                            placeholder="e.g. 0, 1234  2048"
+                                            class="w-full h-10 px-3 rounded bg-slate-950 border border-slate-800 text-sm font-mono"
+                                            spellcheck="false"
+                                            autocomplete="off"
+                                    />
+                                    <div id="findingsLengthExcludeErr" class="text-xs text-red-400 hidden"></div>
+                                </div>
+                            </div>
+
                         </div>
 
                         <div id="findingsPager"></div>
                     </div>
+
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
@@ -492,7 +492,8 @@ http://intranet.local</textarea>
                                           title="Fetches additional request log entries from the server for the current scan (useful after a page reload or if streaming missed items).">i</span>
                                 </div>
 
-                                <div id="requestLogHint" class="text-xs text-slate-400">Select a server row to filter.</div>
+                                <div id="requestLogHint" class="text-xs text-slate-400">Select a server row to filter.
+                                </div>
                             </div>
                         </div>
                         <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>

@@ -16,7 +16,6 @@ export function createFindingsData(state, apiFetch) {
     }
 
     function pickTotalFromResponse(d) {
-        // Support a few common shapes without requiring server changes.
         return asMaybeInt(
             d.total ??
             d.totalCount ??
@@ -37,7 +36,6 @@ export function createFindingsData(state, apiFetch) {
             return;
         }
 
-        // If we already have a known total (seeded from scan meta/list), keep it.
         const cur = state.findingsTotalAll;
         const hasCur = (typeof cur === "number") && Number.isFinite(cur) && cur >= 0;
         if (hasCur) return;
@@ -46,51 +44,69 @@ export function createFindingsData(state, apiFetch) {
         state.findingsTotalLowerBound = false;
     }
 
-    async function fetchPage({cursor = 0, limit = 500} = {}) {
-        if (!state.scanId) {
-            return {items: [], nextCursor: cursor, hasMore: false};
-        }
+    function getFindingsQuery() {
+        const q = (state.findingsQuery && typeof state.findingsQuery === "object") ? state.findingsQuery : {};
+        return {
+            q: String(q.q ?? "").trim(),
+            statusInclude: String(q.statusInclude ?? "").trim(),
+            statusExclude: String(q.statusExclude ?? "").trim(),
+            lengthInclude: String(q.lengthInclude ?? "").trim(),
+            lengthExclude: String(q.lengthExclude ?? "").trim(),
+        };
+    }
 
+    function buildURL({ cursor = 0, limit = 500 } = {}) {
         const BASE = "/api/scans/findings";
-        const url =
+        const fq = getFindingsQuery();
+
+        let url =
             `${BASE}?scanId=${encodeURIComponent(state.scanId)}` +
             `&cursor=${encodeURIComponent(String(cursor ?? 0))}` +
             `&limit=${encodeURIComponent(String(limit ?? 500))}`;
 
-        const resp = await apiFetch(url);
+        if (fq.q) url += `&q=${encodeURIComponent(fq.q)}`;
+        if (fq.statusInclude) url += `&statusInclude=${encodeURIComponent(fq.statusInclude)}`;
+        if (fq.statusExclude) url += `&statusExclude=${encodeURIComponent(fq.statusExclude)}`;
+        if (fq.lengthInclude) url += `&lengthInclude=${encodeURIComponent(fq.lengthInclude)}`;
+        if (fq.lengthExclude) url += `&lengthExclude=${encodeURIComponent(fq.lengthExclude)}`;
+
+        return url;
+    }
+
+    async function fetchPage({ cursor = 0, limit = 500 } = {}) {
+        if (!state.scanId) {
+            return { items: [], nextCursor: cursor, hasMore: false };
+        }
+
+        const resp = await apiFetch(buildURL({ cursor, limit }));
         const d = unwrap(resp);
 
         const items = d.items ?? d.results ?? [];
-        const nextCursor = d.nextCursor ?? d.next ?? (d.cursorNext ?? 0);
+        const nextCursor = d.nextCursor ?? d.next ?? d.cursorNext ?? cursor;
 
-        // Prefer explicit hasMore; otherwise infer.
         const hasMore =
             (typeof d.hasMore === "boolean")
                 ? d.hasMore
-                : (items.length >= asInt(limit, 500) && String(nextCursor) !== String(cursor));
+                : (String(nextCursor) !== String(cursor));
 
-    const totalFromServer = pickTotalFromResponse(d);
-    updateFindingsTotals({
-            cursor,
-            itemsLen: items.length,
-            hasMore,
-            totalFromServer,
-        });
+        const totalFromServer = pickTotalFromResponse(d);
+        updateFindingsTotals({ totalFromServer });
 
-        return {items, nextCursor, hasMore};
+        return { items, nextCursor, hasMore };
     }
 
-    async function loadFindingsFirstPage({limit = 500} = {}) {
+    async function loadFindingsFirstPage({ limit = 500 } = {}) {
         state.findingsLimit = asInt(limit, 500);
         state.findingsCursor = 0;
         state.findingsNextCursor = 0;
         state.findingsPrevCursors = [];
         state.findingsHasMore = false;
 
-        const page = await fetchPage({cursor: 0, limit: state.findingsLimit});
+        const page = await fetchPage({ cursor: 0, limit: state.findingsLimit });
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;
+
         state.findingsTotalAll = Number.isFinite(state.findingsTotalAll) ? state.findingsTotalAll : null;
         state.findingsTotalLowerBound = !!state.findingsTotalLowerBound;
 
@@ -103,13 +119,12 @@ export function createFindingsData(state, apiFetch) {
         const next = state.findingsNextCursor ?? 0;
         const cur = state.findingsCursor ?? 0;
 
-        // push current cursor onto back-stack
         state.findingsPrevCursors = Array.isArray(state.findingsPrevCursors) ? state.findingsPrevCursors : [];
         state.findingsPrevCursors.push(cur);
 
         state.findingsCursor = next;
 
-        const page = await fetchPage({cursor: state.findingsCursor, limit: state.findingsLimit});
+        const page = await fetchPage({ cursor: state.findingsCursor, limit: state.findingsLimit });
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;
@@ -126,7 +141,7 @@ export function createFindingsData(state, apiFetch) {
         const prev = state.findingsPrevCursors.pop();
         state.findingsCursor = prev ?? 0;
 
-        const page = await fetchPage({cursor: state.findingsCursor, limit: state.findingsLimit});
+        const page = await fetchPage({ cursor: state.findingsCursor, limit: state.findingsLimit });
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;
@@ -137,7 +152,7 @@ export function createFindingsData(state, apiFetch) {
     async function reloadFindingsPage() {
         if (!state.scanId) return [];
 
-        const page = await fetchPage({cursor: state.findingsCursor ?? 0, limit: state.findingsLimit});
+        const page = await fetchPage({ cursor: state.findingsCursor ?? 0, limit: state.findingsLimit });
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;
@@ -145,10 +160,49 @@ export function createFindingsData(state, apiFetch) {
         return state.findingsItems;
     }
 
+    async function appendFindingsNextPage() {
+        if (!state.scanId) return [];
+        if (!state.findingsHasMore) return state.findingsItems || [];
+
+        const cursor = state.findingsNextCursor ?? 0;
+        const page = await fetchPage({ cursor, limit: state.findingsLimit });
+
+        const curItems = Array.isArray(state.findingsItems) ? state.findingsItems : [];
+        const nextItems = Array.isArray(page.items) ? page.items : [];
+        state.findingsItems = curItems.concat(nextItems);
+
+        state.findingsNextCursor = page.nextCursor ?? cursor;
+        state.findingsHasMore = !!page.hasMore;
+
+        return state.findingsItems;
+    }
+
+    // Keep API stable for existing callers; do a safe sequential scan.
+    async function seekFindingsNextMatch({ matchFn, maxPages = 40 } = {}) {
+        if (!state.scanId) return { found: false, advanced: false };
+        let pagesScanned = 0;
+        let advanced = false;
+
+        while (pagesScanned < maxPages && state.findingsHasMore) {
+            pagesScanned++;
+            advanced = true;
+
+            await loadFindingsNextPage();
+            const items = Array.isArray(state.findingsItems) ? state.findingsItems : [];
+            if (!matchFn || matchFn(items)) return { found: true, advanced: true };
+
+            if (!state.findingsHasMore) break;
+        }
+
+        return { found: false, advanced };
+    }
+
     return {
         loadFindingsFirstPage,
         loadFindingsNextPage,
         loadFindingsPrevPage,
         reloadFindingsPage,
+        appendFindingsNextPage,
+        seekFindingsNextMatch,
     };
 }

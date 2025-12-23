@@ -30,6 +30,7 @@ function statusName(code) {
 }
 
 export function createFindingsPanel(state) {
+    let lastEmptyEmitKey = "";
     let pagerControlsEnsured = false;
 
     function emitFindingsFilterChanged(reason) {
@@ -180,11 +181,7 @@ export function createFindingsPanel(state) {
     }
 
     function syncStatusExcludeUi() {
-        const set = (state.findingsFilter?.statusExclude instanceof Set) ? state.findingsFilter.statusExclude : new Set();
         const bad = Array.isArray(state.findingsFilter?.statusExcludeBad) ? state.findingsFilter.statusExcludeBad : [];
-
-        const clearBtn = el("findingsStatusExcludeClearBtn");
-        if (clearBtn) clearBtn.disabled = (set.size === 0) && !(String(el("findingsStatusExcludeInput")?.value || "").trim());
 
         if (bad.length) {
             const shown = bad.slice(0, 8);
@@ -196,11 +193,7 @@ export function createFindingsPanel(state) {
     }
 
     function syncLengthExcludeUi() {
-        const set = (state.findingsFilter?.lengthExclude instanceof Set) ? state.findingsFilter.lengthExclude : new Set();
         const bad = Array.isArray(state.findingsFilter?.lengthExcludeBad) ? state.findingsFilter.lengthExcludeBad : [];
-
-        const clearBtn = el("findingsLengthExcludeClearBtn");
-        if (clearBtn) clearBtn.disabled = (set.size === 0) && !(String(el("findingsLengthExcludeInput")?.value || "").trim());
 
         if (bad.length) {
             const shown = bad.slice(0, 8);
@@ -259,13 +252,11 @@ export function createFindingsPanel(state) {
 
     function readFindingsFilterInputs() {
         const searchTokens = normTokens(el("findingsSearch")?.value || "");
-        const hostNeedle = String(el("findingsHost")?.value || "").trim().toLowerCase();
-        const pathNeedle = String(el("findingsPath")?.value || "").trim().toLowerCase();
 
         const excludedStatuses = (state.findingsFilter?.statusExclude instanceof Set) ? state.findingsFilter.statusExclude : new Set();
         const excludedLengths = (state.findingsFilter?.lengthExclude instanceof Set) ? state.findingsFilter.lengthExclude : new Set();
 
-        return { searchTokens, hostNeedle, pathNeedle, excludedStatuses, excludedLengths };
+        return { searchTokens, excludedStatuses, excludedLengths };
     }
 
     function matchFinding(f, flt) {
@@ -283,16 +274,6 @@ export function createFindingsPanel(state) {
             for (const t of flt.searchTokens) if (!hay.includes(t)) return false;
         }
 
-        if (flt.hostNeedle) {
-            if (!host.toLowerCase().includes(flt.hostNeedle)) return false;
-        }
-
-        if (flt.pathNeedle) {
-            const p = path.toLowerCase();
-            const u = url.toLowerCase();
-            if (!p.includes(flt.pathNeedle) && !u.includes(flt.pathNeedle)) return false;
-        }
-
         return true;
     }
 
@@ -303,47 +284,8 @@ export function createFindingsPanel(state) {
         return state.findingsTotalLowerBound ? `${n}+` : String(n);
     }
 
-    function renderExcludedStatusChips() {
-        const wrap = el("findingsExcludedStatuses");
-        if (!wrap) return;
-
-        const xs = Array.from((state.findingsFilter?.statusExclude instanceof Set) ? state.findingsFilter.statusExclude : []).sort((a, b) => a - b);
-
-        // if (!xs.length) {
-        //     wrap.innerHTML = `<span class="text-xs text-slate-500">None</span>`;
-        //     return;
-        // }
-
-        wrap.innerHTML = xs.map((st) => `
-<span class="inline-flex items-center gap-2 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200">
-  <span class="font-mono">${escapeHtml(String(st))}</span>
-  <span class="text-slate-500">${escapeHtml(statusName(st) || "")}</span>
-  <button type="button" title="Remove (adds !CODE to input)" class="text-slate-400 hover:text-slate-200" data-remove-status="${escapeHtml(String(st))}">&times;</button>
-</span>
-`.trim()).join("");
-    }
-
-    function renderExcludedLengthChips() {
-        const wrap = el("findingsExcludedLengths");
-        if (!wrap) return;
-
-        const xs = Array.from((state.findingsFilter?.lengthExclude instanceof Set) ? state.findingsFilter.lengthExclude : []).sort((a, b) => a - b);
-
-        // if (!xs.length) {
-        //     wrap.innerHTML = `<span class="text-xs text-slate-500">None</span>`;
-        //     return;
-        // }
-
-        wrap.innerHTML = xs.map((n) => `
-<span class="inline-flex items-center gap-2 px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-200">
-  <span class="font-mono">${escapeHtml(String(n))}</span>
-  <button type="button" title="Remove (adds !LEN to input)" class="text-slate-400 hover:text-slate-200" data-remove-length="${escapeHtml(String(n))}">&times;</button>
-</span>
-`.trim()).join("");
-    }
-
     function clearFindingsFilters() {
-        const ids = ["findingsSearch", "findingsHost", "findingsPath", "findingsStatusExcludeInput", "findingsLengthExcludeInput"];
+        const ids = ["findingsSearch", "findingsStatusExcludeInput", "findingsLengthExcludeInput"];
         for (const id of ids) {
             const x = el(id);
             if (x) x.value = "";
@@ -360,8 +302,6 @@ export function createFindingsPanel(state) {
 
         syncStatusExcludeUi();
         syncLengthExcludeUi();
-        renderExcludedStatusChips();
-        renderExcludedLengthChips();
         renderFindingsTable();
 
         emitFindingsFilterChanged("status_exclude");
@@ -407,8 +347,6 @@ export function createFindingsPanel(state) {
             if (Number.isFinite(st) && st > 0) state.findingsKnownStatuses.add(st);
         }
 
-        renderExcludedStatusChips();
-        renderExcludedLengthChips();
 
         const filtered = items.filter((f) => matchFinding(f, flt));
 
@@ -443,9 +381,21 @@ export function createFindingsPanel(state) {
         state.findingsLastTotal = pageTotal;
         state.findingsLastShown = shown;
 
-        // const hintText = totalText ? `Showing ${shown} of ${totalText}` : `Showing ${shown}`;
-        // if (el("findingsFilterHint")) el("findingsFilterHint").textContent = hintText;
-        // if (el("findingsActiveHint")) el("findingsActiveHint").textContent = hintText;
+        const emptyKey = [
+            String(state.findingsCursor ?? 0),
+            String(state.findingsFilter?.statusExcludeSpec || ""),
+            String(state.findingsFilter?.lengthExcludeSpec || ""),
+            String(el("findingsSearch")?.value || ""),
+        ].join("|");
+
+        if (state.findingsMode === "paged" && shown === 0 && state.findingsHasMore) {
+            if (emptyKey !== lastEmptyEmitKey) {
+                lastEmptyEmitKey = emptyKey;
+                emitFindingsFilterChanged("page_empty");
+            }
+        } else {
+            lastEmptyEmitKey = "";
+        }
     }
 
     function renderFindingsPager() {
@@ -488,9 +438,16 @@ export function createFindingsPanel(state) {
     }
 
     function bindFilters() {
-        el("findingsSearch")?.addEventListener("input", renderFindingsTable);
-        el("findingsHost")?.addEventListener("input", renderFindingsTable);
-        el("findingsPath")?.addEventListener("input", renderFindingsTable);
+        let tSearch = null;
+        el("findingsSearch")?.addEventListener("input", () => {
+            renderFindingsTable();
+            if (tSearch) clearTimeout(tSearch);
+            tSearch = setTimeout(() => {
+                tSearch = null;
+                emitFindingsFilterChanged("search");
+            }, 150);
+        });
+
 
         el("findingsClearFiltersBtn")?.addEventListener("click", (e) => {
             e.preventDefault();
@@ -507,14 +464,6 @@ export function createFindingsPanel(state) {
             }, 125);
         });
 
-        el("findingsStatusExcludeClearBtn")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            const input = el("findingsStatusExcludeInput");
-            if (input) input.value = "";
-            applyStatusExcludeFromInput({ emit: true });
-            renderFindingsTable();
-        });
-
         let tLen = null;
         el("findingsLengthExcludeInput")?.addEventListener("input", () => {
             if (tLen) clearTimeout(tLen);
@@ -525,63 +474,55 @@ export function createFindingsPanel(state) {
             }, 125);
         });
 
-        el("findingsLengthExcludeClearBtn")?.addEventListener("click", (e) => {
-            e.preventDefault();
-            const input = el("findingsLengthExcludeInput");
-            if (input) input.value = "";
-            applyLengthExcludeFromInput({ emit: true });
-            renderFindingsTable();
-        });
+        // el("findingsExcludedStatuses")?.addEventListener("click", (e) => {
+        //     const btn = e.target.closest("button[data-remove-status]");
+        //     if (!btn) return;
+        //     e.preventDefault();
+        //
+        //     const st = Number.parseInt(btn.getAttribute("data-remove-status") || "", 10);
+        //     if (!Number.isFinite(st)) return;
+        //
+        //     const input = el("findingsStatusExcludeInput");
+        //     if (!input) {
+        //         if (state.findingsFilter?.statusExclude instanceof Set) state.findingsFilter.statusExclude.delete(st);
+        //         renderFindingsTable();
+        //         emitFindingsFilterChanged("status_exclude");
+        //         return;
+        //     }
+        //
+        //     const cur = String(input.value || "").trim();
+        //     const neg = `!${st}`;
+        //     const next = cur ? `${cur} ${neg}` : neg;
+        //     input.value = next;
+        //
+        //     applyStatusExcludeFromInput({ emit: true });
+        //     renderFindingsTable();
+        // });
 
-        el("findingsExcludedStatuses")?.addEventListener("click", (e) => {
-            const btn = e.target.closest("button[data-remove-status]");
-            if (!btn) return;
-            e.preventDefault();
-
-            const st = Number.parseInt(btn.getAttribute("data-remove-status") || "", 10);
-            if (!Number.isFinite(st)) return;
-
-            const input = el("findingsStatusExcludeInput");
-            if (!input) {
-                if (state.findingsFilter?.statusExclude instanceof Set) state.findingsFilter.statusExclude.delete(st);
-                renderFindingsTable();
-                emitFindingsFilterChanged("status_exclude");
-                return;
-            }
-
-            const cur = String(input.value || "").trim();
-            const neg = `!${st}`;
-            const next = cur ? `${cur} ${neg}` : neg;
-            input.value = next;
-
-            applyStatusExcludeFromInput({ emit: true });
-            renderFindingsTable();
-        });
-
-        el("findingsExcludedLengths")?.addEventListener("click", (e) => {
-            const btn = e.target.closest("button[data-remove-length]");
-            if (!btn) return;
-            e.preventDefault();
-
-            const n = Number.parseInt(btn.getAttribute("data-remove-length") || "", 10);
-            if (!Number.isFinite(n) || n < 0) return;
-
-            const input = el("findingsLengthExcludeInput");
-            if (!input) {
-                if (state.findingsFilter?.lengthExclude instanceof Set) state.findingsFilter.lengthExclude.delete(n);
-                renderFindingsTable();
-                emitFindingsFilterChanged("length_exclude");
-                return;
-            }
-
-            const cur = String(input.value || "").trim();
-            const neg = `!${n}`;
-            const next = cur ? `${cur} ${neg}` : neg;
-            input.value = next;
-
-            applyLengthExcludeFromInput({ emit: true });
-            renderFindingsTable();
-        });
+        // el("findingsExcludedLengths")?.addEventListener("click", (e) => {
+        //     const btn = e.target.closest("button[data-remove-length]");
+        //     if (!btn) return;
+        //     e.preventDefault();
+        //
+        //     const n = Number.parseInt(btn.getAttribute("data-remove-length") || "", 10);
+        //     if (!Number.isFinite(n) || n < 0) return;
+        //
+        //     const input = el("findingsLengthExcludeInput");
+        //     if (!input) {
+        //         if (state.findingsFilter?.lengthExclude instanceof Set) state.findingsFilter.lengthExclude.delete(n);
+        //         renderFindingsTable();
+        //         emitFindingsFilterChanged("length_exclude");
+        //         return;
+        //     }
+        //
+        //     const cur = String(input.value || "").trim();
+        //     const neg = `!${n}`;
+        //     const next = cur ? `${cur} ${neg}` : neg;
+        //     input.value = next;
+        //
+        //     applyLengthExcludeFromInput({ emit: true });
+        //     renderFindingsTable();
+        // });
 
         ensureFindingsPagerControls();
 

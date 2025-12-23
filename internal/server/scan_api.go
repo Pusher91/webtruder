@@ -5,13 +5,39 @@ import (
 	"os"
 
 	"github.com/Pusher91/webtruder/internal/domain"
+	"github.com/Pusher91/webtruder/internal/ndjson"
 	"github.com/Pusher91/webtruder/internal/server/api"
 )
 
 func (s *Server) scanFindingsAPI(r *http.Request) (any, *api.APIError) {
-	scanID, page, apiErr := readPaged(r, 200, 2000, s.scanRepo.FindingsPage, "failed to read findings")
+	q := r.URL.Query()
+
+	scanID, apiErr := api.RequireScanID(q.Get("scanId"))
 	if apiErr != nil {
 		return nil, apiErr
+	}
+
+	cursor, limit, apiErr := api.CursorLimitFromQuery(q, 200, 2000)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	keep, apiErr := buildFindingKeep(q)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	page, err := ndjson.ReadNDJSONFromOffsetFiltered[domain.Finding](
+		s.scanRepo.FindingsPath(scanID),
+		cursor,
+		limit,
+		keep,
+	)
+	if err != nil {
+		return nil, &api.APIError{
+			Status: http.StatusInternalServerError,
+			Err:    api.Error{Code: "internal_error", Message: "failed to read findings"},
+		}
 	}
 
 	// Best-effort: include scan-wide totals from meta.
