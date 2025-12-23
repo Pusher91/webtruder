@@ -1,0 +1,12 @@
+{
+  "name": "webtruder-ui",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/cli": "^4.0.0"
+  },
+  "scripts": {
+    "build": "npx @tailwindcss/cli -i internal/server/web/tailwind.css -o internal/server/web/dist/app.css --minify",
+    "watch": "npx @tailwindcss/cli -i internal/server/web/tailwind.css -o internal/server/web/dist/app.css --watch"
+  }
+}

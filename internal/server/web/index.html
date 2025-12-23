@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>webtruder</title>
+    <link rel="stylesheet" href="./dist/app.css"/>
+</head>
+
+<body class="bg-slate-950 text-slate-100">
+<div class="mx-auto p-6 space-y-4">
+
+    <!-- Top bar (compact) -->
+    <header class="space-y-3">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="min-w-0">
+                    <h1 class="text-2xl font-semibold leading-tight">webtruder</h1>
+                    <div id="conn" class="text-sm text-slate-400">connecting...</div>
+                    <div id="egress" class="text-xs text-slate-500 flex flex-wrap gap-x-2"></div>
+                </div>
+
+                <div class="hidden sm:flex items-center gap-2 flex-wrap">
+                    <span id="badgeRunning"
+                          class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300">Running: 0</span>
+                    <span id="badgeQueued"
+                          class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300">Queued: 0</span>
+                    <span id="badgePaused"
+                          class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300">Paused: 0</span>
+                    <span id="badgeDone"
+                          class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300">Done: 0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="space-y-6">
+
+        <!-- LAUNCH -->
+        <div class="rounded border border-slate-800 bg-slate-900">
+            <details id="launchDetails" open class="group">
+                <summary
+                        class="px-3 py-2 border-b border-slate-800 flex items-center justify-between cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-base font-semibold">Launch</h2>
+                    </div>
+                    <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>
+                    <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
+                </summary>
+
+                <div id="launchForm" class="p-3">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+
+                        <!-- Targets -->
+                        <div class="lg:col-span-5 flex flex-col gap-2 self-stretch" data-field="targets">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm text-slate-300">Targets</div>
+                                <button id="clearBtn"
+                                        class="text-xs px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800"
+                                        type="button">
+                                    Clear
+                                </button>
+                            </div>
+
+                            <textarea
+                                    id="targets"
+                                    class="w-full flex-1 min-h-[18rem] p-3 rounded bg-slate-950 border border-slate-800 font-mono text-sm"
+                            >http://example.local
+http://intranet.local</textarea>
+
+                            <div class="text-xs text-slate-500">One URL per line.</div>
+                            <div id="launchMsg" class="text-xs text-slate-400"></div>
+                            <div class="field-error text-xs text-red-400 hidden"></div>
+                        </div>
+
+                        <div class="lg:col-span-7 flex flex-col gap-3 self-stretch">
+                            <!-- Wordlists -->
+                            <div class="rounded border border-slate-800 bg-slate-950 p-3 space-y-3">
+                                <div class="space-y-1">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Existing wordlists
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Pick a wordlist already uploaded to this webtruder instance.">i</span>
+                                    </div>
+
+                                    <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                        <select id="wordlistSelect"
+                                                class="flex-1 p-2 rounded bg-slate-950 border border-slate-800 text-sm">
+                                            <option value="">(none)</option>
+                                        </select>
+
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <button id="refreshWordlistsBtn"
+                                                    class="px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300"
+                                                    type="button">Refresh
+                                            </button>
+                                            <button id="deleteWordlistBtn"
+                                                    class="px-2 py-1 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300"
+                                                    type="button">Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1" data-field="wordlistId">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Wordlist file
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Choose a local wordlist file. It will be uploaded once and reused for future scans.">i</span>
+                                    </div>
+
+                                    <input id="wordlistFile" type="file" accept=".txt,.lst,.wordlist,text/plain"
+                                           class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+
+                                    <input id="wordlistId" type="hidden" value=""/>
+                                    <div id="wordlistPicked" class="text-xs text-slate-500">No file selected.</div>
+                                    <div class="field-error text-xs text-red-400 hidden"></div>
+                                </div>
+                            </div>
+
+                            <!-- Options -->
+                            <div class="rounded bg-slate-950 border border-slate-800 p-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <div class="space-y-1" data-field="concurrency">
+                                        <div class="text-sm text-slate-300 flex items-center gap-2">
+                                            Concurrency
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                                  title="How many requests this scan will run in parallel per scan.">i</span>
+                                        </div>
+                                        <input id="concurrency" type="number" min="1" max="4096" value="64"
+                                               class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                        <div class="field-error text-xs text-red-400 hidden"></div>
+                                    </div>
+
+                                    <div class="space-y-1" data-field="timeoutMs">
+                                        <div class="text-sm text-slate-300 flex items-center gap-2">
+                                            Timeout (ms)
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                                  title="Per-request timeout in milliseconds.">i</span>
+                                        </div>
+                                        <input id="timeoutMs" type="number" min="100" value="5000"
+                                               class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                        <div class="field-error text-xs text-red-400 hidden"></div>
+                                    </div>
+
+                                    <div class="space-y-1" data-field="rateLimit">
+                                        <div class="text-sm text-slate-300 flex items-center gap-2">
+                                            Rate limit (req/s)
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                                  title="Maximum requests per second for this scan. 0 means unlimited.">i</span>
+                                        </div>
+                                        <input id="rateLimit" type="number" min="0" value="0"
+                                               class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                        <div class="text-xs text-slate-500">0 = unlimited.</div>
+                                        <div class="field-error text-xs text-red-400 hidden"></div>
+                                    </div>
+
+                                    <div class="space-y-1" data-field="tags">
+                                        <div class="text-sm text-slate-300">Tags (optional)</div>
+                                        <input id="scanTag" type="text" placeholder="corp-q4, staging, etc"
+                                               class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                        <div class="field-error text-xs text-red-400 hidden"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1" data-field="proxy">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Proxy (optional)
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Route scan HTTP(S) requests through a proxy (e.g. Burp/mitmproxy). Example: http://127.0.0.1:8080">i</span>
+                                    </div>
+                                    <input id="proxy" type="text" placeholder="http://127.0.0.1:8080"
+                                           class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                    <div class="field-error text-xs text-red-400 hidden"></div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <label for="verbose" class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input id="verbose" type="checkbox"
+                                               class="rounded border-slate-800 bg-slate-950"/>
+                                        <span class="text-sm text-slate-300">Verbose logs (stream + save to disk)</span>
+                                    </label>
+                                    <div class="text-xs text-slate-500 mt-1">
+                                        When verbose logs are enabled, every request is shown and written to
+                                        data/scans/*.ndjson.
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-slate-800 flex items-center justify-end">
+                        <button type="button" id="startBtn"
+                                class="px-5 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm">
+                            Start scan
+                        </button>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- Scans -->
+        <div class="rounded border border-slate-800 bg-slate-900">
+            <details id="scansDetails" open class="group">
+                <summary
+                        class="p-4 border-b border-slate-800 flex items-center justify-between cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-lg font-semibold">Scans</h2>
+                            <div id="scanCount" class="text-xs text-slate-400">0 total</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="scansHint" class="text-xs text-slate-400"></div>
+                            <button id="refreshScansBtn"
+                                    class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm"
+                                    type="button">Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>
+                    <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
+                </summary>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
+                        <tr>
+                            <th class="text-left p-3">Scan</th>
+                            <th class="text-left p-3">Status</th>
+                            <th class="text-left p-3">Started</th>
+                            <th class="text-left p-3">Targets</th>
+                            <th class="text-left p-3">Tags</th>
+                            <th class="text-left p-3">Findings</th>
+                            <th class="text-left p-3">Errors</th>
+                            <th class="text-left p-3">Verbose</th>
+                            <th class="text-left p-3">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="scanRows" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </details>
+        </div>
+
+        <!-- Active scan context (title for panels below) -->
+        <div class="rounded border border-slate-800 bg-slate-900">
+            <div class="px-4 py-3 border-b border-slate-800 bg-slate-950 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0">
+                    <div class="text-xs text-slate-500">Viewing</div>
+                    <div id="activeScanTitle" class="text-base font-semibold text-slate-100 truncate">No scan selected</div>
+                </div>
+                <div id="activeScanMeta" class="text-xs text-slate-400 sm:text-right"></div>
+            </div>
+            <div class="px-4 py-2 text-xs text-slate-500">
+                Servers, Findings, and Request log below reflect this scan.
+            </div>
+        </div>
+
+        <main class="lg:col-span-8 space-y-6">
+
+            <!-- Servers -->
+            <div class="rounded border border-slate-800 bg-slate-900">
+                <details id="serversDetails" open class="group">
+                    <summary
+                            class="p-4 border-b border-slate-800 flex items-center justify-between cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between w-full">
+                            <div class="flex items-center justify-between sm:justify-start gap-3">
+                                <h2 class="text-lg font-semibold">Servers</h2>
+                                <div id="serverCount" class="text-xs text-slate-400">0 total</div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                <input id="serverFilter" placeholder="Filter (host)"
+                                       class="w-full sm:w-72 p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                                <select id="statusFilter"
+                                        class="w-full sm:w-40 p-2 rounded bg-slate-950 border border-slate-800 text-sm">
+                                    <option value="all">All</option>
+                                    <option value="running">Running</option>
+                                    <option value="queued">Queued</option>
+                                    <option value="paused">Paused</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="error">Error</option>
+                                </select>
+                                <select id="sortBy"
+                                        class="w-full sm:w-44 p-2 rounded bg-slate-950 border border-slate-800 text-sm">
+                                    <option value="host">Sort: host</option>
+                                    <option value="progress">Sort: progress</option>
+                                    <option value="status">Sort: status</option>
+                                    <option value="findings">Sort: findings</option>
+                                    <option value="recent">Sort: recent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
+                    </summary>
+
+                    <div>
+                        <div class="p-4 border-b border-slate-800 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <div class="text-xs text-slate-400 whitespace-nowrap">Overall</div>
+                                <div class="flex-1 bg-slate-800 rounded h-2 overflow-hidden">
+                                    <div id="runningOverallBar" class="bg-emerald-500 h-2 rounded"
+                                         style="width:0"></div>
+                                </div>
+                                <div id="runningOverallText" class="text-xs text-slate-400 w-10 text-right">0%</div>
+                            </div>
+                            <div id="runningMeta" class="text-xs text-slate-500 w-fit m-auto">0/0 requests - 0 req/s</div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
+                                <tr>
+                                    <th class="text-left p-3">Server</th>
+                                    <th class="text-left p-3">State</th>
+                                    <th class="text-left p-3">Progress</th>
+                                    <th class="text-left p-3">Checked</th>
+                                    <th class="text-left p-3">Findings</th>
+                                    <th class="text-left p-3">Errors</th>
+                                    <th class="text-left p-3">Rate</th>
+                                    <th class="text-left p-3">Controls</th>
+                                </tr>
+                                </thead>
+                                <tbody id="serverRows" class="divide-y divide-slate-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Findings -->
+            <div class="rounded border border-slate-800 bg-slate-900">
+                <details id="findingsDetails" open class="group">
+                    <summary
+                            class="p-4 border-b border-slate-800 flex items-center justify-between cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-lg font-semibold">Findings</h2>
+                                <div id="findingsCount" class="text-xs text-slate-400">0 total</div>
+                            </div>
+                            <div id="findingsActiveHint" class="text-xs text-slate-400"></div>
+                        </div>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
+                    </summary>
+
+                    <div class="p-4 border-b border-slate-800 bg-slate-950 space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                            <div class="md:col-span-5 space-y-1">
+                                <div class="text-sm text-slate-300">Search</div>
+                                <input id="findingsSearch"
+                                       placeholder="tokens match URL/host/path (space = AND)"
+                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                            </div>
+
+                            <div class="md:col-span-3 space-y-1">
+                                <div class="text-sm text-slate-300">Host</div>
+                                <input id="findingsHost"
+                                       placeholder="example.com"
+                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                            </div>
+
+                            <div class="md:col-span-3 space-y-1">
+                                <div class="text-sm text-slate-300">Path</div>
+                                <input id="findingsPath"
+                                       placeholder="/.git"
+                                       class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"/>
+                            </div>
+
+                            <div class="md:col-span-1">
+                                <button id="findingsClearFiltersBtn" type="button"
+                                        class="w-full px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+                            <div class="md:col-span-8 space-y-2">
+                                <div class="flex items-start justify-between gap-3 flex-wrap">
+                                    <div class="flex items-start gap-2 flex-wrap">
+                                        <div class="text-sm text-slate-300 flex items-center gap-2">
+                                            Exclude status codes
+                                            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                                  title="Examples: 404,403  300-399  4xx  !404 (re-include). Tokens can be separated by commas or spaces.">i</span>
+                                        </div>
+
+                                        <input
+                                                id="findingsStatusExcludeInput"
+                                                placeholder="e.g. 404,403 300-399 4xx !404"
+                                                class="w-64 p-2 rounded bg-slate-950 border border-slate-800 text-sm"
+                                                spellcheck="false"
+                                                autocomplete="off"
+                                        />
+
+                                        <button id="findingsStatusExcludeClearBtn" type="button"
+                                                class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-950"
+                                                disabled>
+                                            Clear
+                                        </button>
+
+                                        <div id="findingsFilterHint" class="text-xs text-slate-400 whitespace-nowrap"></div>
+                                    </div>
+
+<!--                                    <div class="text-xs text-slate-500">-->
+<!--                                        Examples:-->
+<!--                                        <span class="font-mono">404</span>-->
+<!--                                        <span class="font-mono">300-399</span>-->
+<!--                                        <span class="font-mono">4xx</span>-->
+<!--                                        <span class="font-mono">!404</span>-->
+<!--                                    </div>-->
+                                </div>
+
+                                <div id="findingsStatusExcludeErr" class="text-xs text-red-400 hidden"></div>
+
+                                <div id="findingsExcludedStatuses" class="flex flex-wrap gap-2"></div>
+                            </div>
+
+                            <div class="md:col-span-4 space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="text-sm text-slate-300 flex items-center gap-2">
+                                        Exclude lengths
+                                        <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                              title="Exclude exact response lengths. Tokens separated by commas or spaces. Use !LEN to re-include.">i</span>
+                                    </div>
+
+                                    <button id="findingsLengthExcludeClearBtn" type="button"
+                                            class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm text-slate-300 disabled:opacity-40 disabled:hover:bg-slate-950"
+                                            disabled>
+                                        Clear
+                                    </button>
+                                </div>
+
+                                <input
+                                        id="findingsLengthExcludeInput"
+                                        placeholder="e.g. 0, 1234  2048  !1234"
+                                        class="w-full p-2 rounded bg-slate-950 border border-slate-800 text-sm"
+                                        spellcheck="false"
+                                        autocomplete="off"
+                                />
+
+<!--                                <div class="text-xs text-slate-500">-->
+<!--                                    Examples:-->
+<!--                                    <span class="font-mono">0</span>-->
+<!--                                    <span class="font-mono">1234</span>-->
+<!--                                    <span class="font-mono">!1234</span>-->
+<!--                                </div>-->
+
+                                <div id="findingsLengthExcludeErr" class="text-xs text-red-400 hidden"></div>
+                                <div id="findingsExcludedLengths" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+
+                        <div id="findingsPager"></div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
+                            <tr>
+                                <th class="text-left p-3">URL</th>
+                                <th class="text-left p-3">Status</th>
+                                <th class="text-left p-3">Length</th>
+                            </tr>
+                            </thead>
+                            <tbody id="findings" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Request Log -->
+            <div class="rounded border border-slate-800 bg-slate-900">
+                <details id="requestLogDetails" open class="group">
+                    <summary
+                            class="p-4 border-b border-slate-800 flex items-center justify-between cursor-pointer select-none hover:bg-slate-800/40 transition-colors">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-lg font-semibold">Request log</h2>
+                                <div id="requestLogCount" class="text-xs text-slate-400">0 total</div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2">
+                                    <button id="refreshLogsBtn"
+                                            class="px-3 py-2 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-sm"
+                                            type="button">Refresh logs
+                                    </button>
+                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-950 border border-slate-800 text-[10px] text-slate-400 cursor-help"
+                                          title="Fetches additional request log entries from the server for the current scan (useful after a page reload or if streaming missed items).">i</span>
+                                </div>
+
+                                <div id="requestLogHint" class="text-xs text-slate-400">Select a server row to filter.</div>
+                            </div>
+                        </div>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 group-open:hidden">Minimized</span>
+                        <span class="pl-2 ml-auto text-[11px] text-slate-500 hidden group-open:inline">Maximized</span>
+                    </summary>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-950 text-slate-300 border-b border-slate-800">
+                            <tr>
+                                <th class="text-left p-3">URL</th>
+                                <th class="text-left p-3">Status</th>
+                                <th class="text-left p-3">Length</th>
+                                <th class="text-left p-3">ms</th>
+                                <th class="text-left p-3">Error</th>
+                            </tr>
+                            </thead>
+                            <tbody id="requestLogRows" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+
+        </main>
+    </section>
+</div>
+
+<script type="module" src="./lib/app.js"></script>
+</body>
+</html>
