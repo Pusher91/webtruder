@@ -78,7 +78,6 @@ func performProbe(ctx context.Context, client *http.Client, timeout time.Duratio
 		}
 	}
 
-	// Use body size for size-based filtering/soft-404 detection
 	out.length = out.bodyBytes
 	return out
 }
@@ -120,9 +119,7 @@ func (e *Engine) workerLoop(
 				}
 			}
 
-			u := *j.host.base
-			u.Path = joinPath(j.host.base.Path, j.path)
-			fullURL := u.String()
+			fullURL := buildRawURL(j.host.base, j.path)
 
 			out := performProbe(ctx, client, timeout, fullURL)
 			if out.wasCanceled {

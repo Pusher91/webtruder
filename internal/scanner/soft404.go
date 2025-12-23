@@ -135,9 +135,8 @@ func (e *Engine) calcSoft404Sig(
 			return sig
 		}
 
-		u := *h.base
-		u.Path = joinPath(h.base.Path, p)
-		out := performProbe(ctx, client, timeout, u.String())
+		fullURL := buildRawURL(h.base, p)
+		out := performProbe(ctx, client, timeout, fullURL)
 
 		<-h.sem
 
