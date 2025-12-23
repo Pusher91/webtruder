@@ -2,8 +2,10 @@
 
 Lightweight, localhost-only web UI for bulk web directory enumeration during penetration tests. Single Go binary, minimal dependencies, no authentication, results + progress streamed live.
 
+**Launch and Manage Scans**
 ![webtruder web gui](./screenshot01.png)
 
+**Filter Results**
 ![webtruder web gui](./screenshot02.png)
 
 ## What it does
