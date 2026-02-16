@@ -120,11 +120,9 @@ export function createFindingsData(state, apiFetch) {
         const cur = state.findingsCursor ?? 0;
 
         state.findingsPrevCursors = Array.isArray(state.findingsPrevCursors) ? state.findingsPrevCursors : [];
+        const page = await fetchPage({ cursor: next, limit: state.findingsLimit });
         state.findingsPrevCursors.push(cur);
-
         state.findingsCursor = next;
-
-        const page = await fetchPage({ cursor: state.findingsCursor, limit: state.findingsLimit });
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;
@@ -138,10 +136,10 @@ export function createFindingsData(state, apiFetch) {
         state.findingsPrevCursors = Array.isArray(state.findingsPrevCursors) ? state.findingsPrevCursors : [];
         if (state.findingsPrevCursors.length === 0) return state.findingsItems || [];
 
-        const prev = state.findingsPrevCursors.pop();
-        state.findingsCursor = prev ?? 0;
-
-        const page = await fetchPage({ cursor: state.findingsCursor, limit: state.findingsLimit });
+        const prev = state.findingsPrevCursors[state.findingsPrevCursors.length - 1] ?? 0;
+        const page = await fetchPage({ cursor: prev, limit: state.findingsLimit });
+        state.findingsPrevCursors.pop();
+        state.findingsCursor = prev;
         state.findingsItems = page.items;
         state.findingsNextCursor = page.nextCursor ?? 0;
         state.findingsHasMore = !!page.hasMore;

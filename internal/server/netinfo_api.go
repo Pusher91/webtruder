@@ -13,6 +13,7 @@ import (
 )
 
 type netInfoResp struct {
+	Version           string   `json:"version"`
 	LocalIPv4s        []string `json:"localIPv4s"`
 	OutboundLocalIPv4 string   `json:"outboundLocalIPv4,omitempty"`
 	PublicIPv4        string   `json:"publicIPv4,omitempty"`
@@ -27,12 +28,17 @@ func (s *Server) netInfoAPI(r *http.Request) (any, *api.APIError) {
 	outbound := outboundLocalIPv4()
 
 	pubEnabled := s != nil && s.publicIPv4Enabled
+	ver := ""
+	if s != nil {
+		ver = strings.TrimSpace(s.version)
+	}
 	pub := ""
 	if pubEnabled {
 		pub = fetchPublicIPv4(ctx)
 	}
 
 	return netInfoResp{
+		Version:           ver,
 		LocalIPv4s:        local,
 		OutboundLocalIPv4: outbound,
 		PublicIPv4:        pub,

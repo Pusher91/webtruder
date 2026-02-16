@@ -19,7 +19,7 @@ func (r *StartRequest) NormalizeAndValidate() map[string]string {
 	r.WordlistID = strings.TrimSpace(r.WordlistID)
 	r.Proxy = strings.TrimSpace(r.Proxy)
 
-	r.Targets = trimNonEmpty(r.Targets)
+	r.Targets = dedupePreserveOrder(trimNonEmpty(r.Targets))
 	r.Tags = trimNonEmpty(r.Tags)
 
 	if len(r.Targets) == 0 {
@@ -74,6 +74,25 @@ func trimNonEmpty(in []string) []string {
 		if s != "" {
 			out = append(out, s)
 		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func dedupePreserveOrder(in []string) []string {
+	if len(in) <= 1 {
+		return in
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
 	}
 	if len(out) == 0 {
 		return nil

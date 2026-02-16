@@ -2,11 +2,34 @@ import { el, escapeHtml } from "./dom.js";
 import { fmtWhen } from "./format.js";
 
 export function createScansPanel(state) {
+    function asInt(v) {
+        const n = Number.parseInt(String(v ?? ""), 10);
+        return Number.isFinite(n) ? n : 0;
+    }
+
+    function scanProgress(it, stRaw) {
+        const targetsTotal = asInt(it.targetsTotal || it.targetsCount || (Array.isArray(it.targets) ? it.targets.length : 0));
+        let targetsDone = asInt(it.targetsDone);
+        let progressPct = asInt(it.progressPct ?? it.progressPercent);
+
+        if (String(stRaw) === "completed") {
+            progressPct = 100;
+            if (targetsTotal > 0) targetsDone = targetsTotal;
+        }
+
+        if (targetsDone > targetsTotal && targetsTotal > 0) targetsDone = targetsTotal;
+        if (progressPct < 0) progressPct = 0;
+        if (progressPct > 100) progressPct = 100;
+
+        return { progressPct, targetsDone, targetsTotal };
+    }
+
     function scanRowHtml(it) {
         const isSelected = state.scanId && state.scanId === it.id;
 
         const stRaw = String(it.status || "").toLowerCase();
         const active = !!it.active;
+        const prog = scanProgress(it, stRaw);
 
         const orphaned = !active && (stRaw === "running" || stRaw === "paused");
         const showStatus = orphaned ? "stopped" : (it.status || "-");
@@ -49,6 +72,7 @@ ${canDelete ? btn("delete", "Delete") : ""}
 <tr class="${trClass}" data-scanid="${escapeHtml(it.id)}">
   <td class="p-3 font-mono">${escapeHtml(it.id)}</td>
   <td class="p-3"><span class="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-xs text-slate-300">${escapeHtml(showStatus)}</span></td>
+  <td class="p-3 text-slate-300"><span class="font-mono text-sm">${escapeHtml(String(prog.progressPct))}%</span></td>
   <td class="p-3 text-slate-300">${escapeHtml(fmtWhen(it.startedAt))}</td>
   <td class="p-3 text-slate-300">${escapeHtml(String(targetsCount))}</td>
   <td class="p-3 text-slate-300">${escapeHtml(tags || "-")}</td>
@@ -74,13 +98,20 @@ ${canDelete ? btn("delete", "Delete") : ""}
         if (hint) hint.textContent = state.scanId ? `selected: ${state.scanId}` : (n ? "" : "no scans");
     }
 
-    function bindScansUI({ onRefresh, onSelect, onAction } = {}) {
+    function bindScansUI({ onRefresh, onSelect, onAction, onInteract } = {}) {
         el("refreshScansBtn")?.addEventListener("click", async (e) => {
             e.preventDefault();
+            onInteract?.();
             await onRefresh?.();
         });
 
-        el("scanRows")?.addEventListener("click", async (e) => {
+        const scanRows = el("scanRows");
+        scanRows?.addEventListener("pointerdown", () => {
+            onInteract?.();
+        }, { passive: true });
+
+        scanRows?.addEventListener("click", async (e) => {
+            onInteract?.();
             const btnEl = e.target.closest("button[data-action][data-scanid]");
             if (btnEl) {
                 e.preventDefault();

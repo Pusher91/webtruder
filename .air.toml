@@ -1,0 +1,21 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/webtruder"
+entrypoint = ["./tmp/main", "-addr", "0.0.0.0:8787"]
+include_ext = ["go", "tpl", "tmpl", "html", "css", "js"]
+exclude_dir = ["assets", "tmp", "vendor", "testdata", "node_modules", "dist", "webtruder_data", ".git"]
+exclude_regex = ["_test.go"]
+delay = 1000
+stop_on_error = true
+send_interrupt = true
+kill_delay = "500ms"
+log = "build-errors.log"
+
+[screen]
+clear_on_rebuild = true
+keep_scroll = true
+
+[misc]
+clean_on_exit = false

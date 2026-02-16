@@ -15,7 +15,10 @@ export function createNetinfoPanel() {
         const local = d.outboundLocalIPv4 || "";
         const pub = d.publicIPv4 || "";
         const pubEnabled = d.publicIPv4Enabled === true;
-        const ips = Array.isArray(d.localIPv4) ? d.localIPv4 : [];
+        const version = String(d.version || "").trim();
+        const ips = Array.isArray(d.localIPv4s)
+            ? d.localIPv4s
+            : (Array.isArray(d.localIPv4) ? d.localIPv4 : []);
 
         function add(text) {
             const span = document.createElement("span");
@@ -23,6 +26,9 @@ export function createNetinfoPanel() {
             span.textContent = text;
             e.appendChild(span);
         }
+
+        if (version) add(`webtruder ${version}`);
+        else add("webtruder version: unknown");
 
         if (local) add(`Local IPv4: ${local}`);
         else if (ips.length) add(`Local IPv4: ${ips.join(", ")}`);

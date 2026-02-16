@@ -63,12 +63,6 @@ async function uploadWordlistOnce(file) {
     return id;
 }
 
-async function sha256Hex(file) {
-    const buf = await file.arrayBuffer();
-    const hashBuf = await crypto.subtle.digest("SHA-256", buf);
-    return Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 async function ensureWordlistId() {
     const hidden = el("wordlistId");
     const input = el("wordlistFile");
@@ -79,20 +73,10 @@ async function ensureWordlistId() {
     const file = input.files && input.files[0];
     if (!file) return "";
 
-    setWordlistStatus(`Hashing ${file.name}...`);
-    const hash = await sha256Hex(file);
-
-    const ex = unwrap(await apiFetch(`/api/wordlists/exists?id=${encodeURIComponent(hash)}`));
-    if (ex.exists) {
-        hidden.value = hash;
-        setWordlistStatus(`Selected: ${file.name} (already uploaded)`);
-        return hash;
-    }
-
-    setWordlistStatus(`Uploading ${file.name}...`);
+    setWordlistStatus(`Uploading ${file.name} (server de-dupe)...`);
     const id = await uploadWordlistOnce(file);
     hidden.value = id;
-    setWordlistStatus(`Selected: ${file.name}`);
+    setWordlistStatus(`Selected: ${file.name} (${id.slice(0, 12)})`);
     return id;
 }
 
@@ -122,10 +106,17 @@ async function startScan() {
         const verbose = !!el("verbose")?.checked;
         const proxy = (el("proxy")?.value || "").trim();
 
-        await apiFetch("/api/scan/start", {
+        const startResp = unwrap(await apiFetch("/api/scan/start", {
             method: "POST",
             body: { targets, wordlistId, concurrency, timeoutMs, rateLimit, tags, verbose, proxy },
-        });
+        }));
+
+        const scanId = String(startResp.scanId || "").trim();
+        if (scanId) {
+            try {
+                document.dispatchEvent(new CustomEvent("scan_start_accepted", { detail: { scanId } }));
+            } catch {}
+        }
 
         launchMsg.className = "text-xs text-emerald-400";
         launchMsg.textContent = "scan started";

@@ -39,6 +39,68 @@ export function installFindingsAutoSeek({ state, ui, data }) {
         return { inc, exc };
     }
 
+    function setError(id, msg) {
+        const x = el(id);
+        if (!x) return;
+        const text = String(msg || "").trim();
+        x.textContent = text;
+        if (text) x.classList.remove("hidden");
+        else x.classList.add("hidden");
+    }
+
+    function setActiveHint(msg, { isError = false } = {}) {
+        const x = el("findingsActiveHint");
+        if (!x) return;
+        const text = String(msg || "").trim();
+        x.textContent = text;
+        x.classList.remove("text-slate-400", "text-red-400");
+        x.classList.add(isError ? "text-red-400" : "text-slate-400");
+    }
+
+    function isValidStatusToken(tok) {
+        const t = String(tok || "").trim().toLowerCase();
+        if (!t) return false;
+
+        if (/^\d{3}$/.test(t)) {
+            const n = Number.parseInt(t, 10);
+            return n >= 100 && n <= 599;
+        }
+        if (/^[1-5]xx$/.test(t)) return true;
+
+        if (/^\d{3}-\d{3}$/.test(t)) {
+            const [aRaw, bRaw] = t.split("-");
+            const a = Number.parseInt(aRaw, 10);
+            const b = Number.parseInt(bRaw, 10);
+            return a >= 100 && a <= 599 && b >= 100 && b <= 599 && a <= b;
+        }
+
+        return false;
+    }
+
+    function isValidLengthToken(tok) {
+        const t = String(tok || "").trim().toLowerCase();
+        if (!t) return false;
+
+        if (/^\d+$/.test(t)) return true;
+
+        if (/^\d+-\d+$/.test(t)) {
+            const [aRaw, bRaw] = t.split("-");
+            const a = Number.parseInt(aRaw, 10);
+            const b = Number.parseInt(bRaw, 10);
+            return a >= 0 && b >= 0 && a <= b;
+        }
+
+        return false;
+    }
+
+    function invalidTokens(tokens, validateFn) {
+        const bad = [];
+        for (const tok of (tokens || [])) {
+            if (!validateFn(tok)) bad.push(tok);
+        }
+        return bad;
+    }
+
     function buildFindingsQueryFromDOM() {
         const q = String(el("findingsSearch")?.value || "").trim();
 
@@ -56,11 +118,31 @@ export function installFindingsAutoSeek({ state, ui, data }) {
         const lenIncFromInc = splitTokens(lenIncRaw).map((t) => (t.startsWith("!") ? t.slice(1) : t)).filter(Boolean);
         const lenParsed = parseIncExc(lenExcRaw, { bangMeansInclude: true });
 
-        const statusInclude = [...stIncFromInc, ...stParsed.inc].join(",");
-        const statusExclude = stParsed.exc.join(",");
+        const statusIncludeToks = [...stIncFromInc, ...stParsed.inc];
+        const statusExcludeToks = stParsed.exc;
 
-        const lengthInclude = [...lenIncFromInc, ...lenParsed.inc].join(",");
-        const lengthExclude = lenParsed.exc.join(",");
+        const lengthIncludeToks = [...lenIncFromInc, ...lenParsed.inc];
+        const lengthExcludeToks = lenParsed.exc;
+
+        const badStatusInc = invalidTokens(statusIncludeToks, isValidStatusToken);
+        const badLengthInc = invalidTokens(lengthIncludeToks, isValidLengthToken);
+        const badStatusExc = invalidTokens(statusExcludeToks, isValidStatusToken);
+        const badLengthExc = invalidTokens(lengthExcludeToks, isValidLengthToken);
+
+        setError("findingsStatusIncludeErr", badStatusInc.length ? `Invalid token(s): ${badStatusInc.slice(0, 8).join(", ")}` : "");
+        setError("findingsLengthIncludeErr", badLengthInc.length ? `Invalid token(s): ${badLengthInc.slice(0, 8).join(", ")}` : "");
+
+        if (badStatusInc.length || badLengthInc.length || badStatusExc.length || badLengthExc.length) {
+            setActiveHint("Fix invalid filter tokens before reloading findings.", { isError: true });
+            return null;
+        }
+
+        setActiveHint("", { isError: false });
+
+        const statusInclude = statusIncludeToks.join(",");
+        const statusExclude = statusExcludeToks.join(",");
+        const lengthInclude = lengthIncludeToks.join(",");
+        const lengthExclude = lengthExcludeToks.join(",");
 
         return {
             q,
@@ -78,7 +160,9 @@ export function installFindingsAutoSeek({ state, ui, data }) {
 
         running = true;
         try {
-            state.findingsQuery = buildFindingsQueryFromDOM();
+            const query = buildFindingsQueryFromDOM();
+            if (!query) return;
+            state.findingsQuery = query;
 
             const lim = Number(state.findingsLimit || 500);
             await data.loadFindingsFirstPage({ limit: lim });
@@ -104,7 +188,10 @@ export function installFindingsAutoSeek({ state, ui, data }) {
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
             timer = null;
-            reloadFirstPage().catch(() => {});
+            reloadFirstPage().catch((err) => {
+                const msg = String(err?.message || "").trim() || "Failed to refresh findings.";
+                setActiveHint(msg, { isError: true });
+            });
         }, 200);
     }
 

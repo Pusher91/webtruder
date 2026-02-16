@@ -1,4 +1,8 @@
-cd /mnt/c/Users/Dave/Desktop/webtruder
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
 rm -rf dist
 mkdir -p dist
 npm ci
@@ -8,4 +12,3 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o dist/webtruder_linux_arm64 ./cmd/webtruder
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o dist/webtruder_windows_amd64.exe ./cmd/webtruder
 (cd dist && sha256sum * > sha256sums.txt)
-

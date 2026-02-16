@@ -15,6 +15,12 @@ export function createScansData(state, apiFetch) {
         const resp = await apiFetch("/api/scans");
         const d = unwrap(resp);
         state.scans = d.items ?? d.scans ?? d.results ?? [];
+        if (state.scanProgressByScan instanceof Map) {
+            const keep = new Set((state.scans || []).map((x) => String(x?.id || "").trim()).filter(Boolean));
+            for (const k of state.scanProgressByScan.keys()) {
+                if (!keep.has(k)) state.scanProgressByScan.delete(k);
+            }
+        }
         return state.scans;
     }
 

@@ -76,7 +76,7 @@ export function createFindingsPanel(state) {
 
             if (/^\d{3}$/.test(t)) {
                 const n = Number.parseInt(t, 10);
-                if (!(n >= 100 && n <= 999)) return false;
+                if (!(n >= 100 && n <= 599)) return false;
                 if (neg) out.delete(n); else out.add(n);
                 return true;
             }
@@ -85,7 +85,7 @@ export function createFindingsPanel(state) {
                 const [aRaw, bRaw] = t.split("-");
                 const a = Number.parseInt(aRaw, 10);
                 const b = Number.parseInt(bRaw, 10);
-                if (!(a >= 100 && a <= 999 && b >= 100 && b <= 999)) return false;
+                if (!(a >= 100 && a <= 599 && b >= 100 && b <= 599)) return false;
 
                 if (neg) {
                     let lo = a, hi = b;
@@ -99,7 +99,7 @@ export function createFindingsPanel(state) {
                 return addRange(a, b);
             }
 
-            const m = /^([1-9])xx$/i.exec(t);
+            const m = /^([1-5])xx$/i.exec(t);
             if (m) {
                 const h = Number.parseInt(m[1], 10);
                 const a = h * 100;

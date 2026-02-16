@@ -165,6 +165,16 @@ func (rt *runtime) signalStatus(status domain.ScanStatus) {
 	}
 	select {
 	case ch <- status:
+		return
+	default:
+	}
+	// If full, drop one pending status and enqueue the latest desired status.
+	select {
+	case <-ch:
+	default:
+	}
+	select {
+	case ch <- status:
 	default:
 	}
 }

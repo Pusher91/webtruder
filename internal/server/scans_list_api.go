@@ -15,6 +15,9 @@ type scansListItem struct {
 	StartedAt     string   `json:"startedAt,omitempty"`
 	FinishedAt    string   `json:"finishedAt,omitempty"`
 	Status        string   `json:"status,omitempty"`
+	ProgressPct   int      `json:"progressPct"`
+	TargetsDone   int      `json:"targetsDone"`
+	TargetsTotal  int      `json:"targetsTotal"`
 	Targets       []string `json:"targets,omitempty"`
 	WordlistID    string   `json:"wordlistId,omitempty"`
 	WordlistNames []string `json:"wordlistNames,omitempty"`
@@ -76,11 +79,16 @@ func (s *Server) scansListAPI(r *http.Request) (any, *api.APIError) {
 			}
 		}
 
+		progressPct, targetsDone, targetsTotal := computeScanProgress(meta)
+
 		items = append(items, scansListItem{
 			ID:            meta.ID,
 			StartedAt:     meta.StartedAt,
 			FinishedAt:    meta.FinishedAt,
 			Status:        string(meta.Status),
+			ProgressPct:   progressPct,
+			TargetsDone:   targetsDone,
+			TargetsTotal:  targetsTotal,
 			Targets:       meta.Targets,
 			WordlistID:    meta.WordlistID,
 			WordlistNames: meta.WordlistNames,
@@ -101,4 +109,64 @@ func (s *Server) scansListAPI(r *http.Request) (any, *api.APIError) {
 	})
 
 	return scansListResp{Items: items}, nil
+}
+
+func computeScanProgress(meta domain.Meta) (progressPct, targetsDone, targetsTotal int) {
+	targetsTotal = len(meta.Targets)
+	if targetsTotal == 0 && len(meta.Hosts) > 0 {
+		targetsTotal = len(meta.Hosts)
+	}
+
+	var checkedTotal int64
+	var requestTotal int64
+
+	for _, h := range meta.Hosts {
+		total := h.Total
+		checked := h.Checked
+		if total > 0 {
+			if checked < 0 {
+				checked = 0
+			}
+			if checked > total {
+				checked = total
+			}
+			checkedTotal += checked
+			requestTotal += total
+
+			if checked >= total {
+				targetsDone++
+			}
+			continue
+		}
+
+		if strings.EqualFold(string(h.Status), string(domain.HostStatusCompleted)) {
+			targetsDone++
+		}
+	}
+
+	if requestTotal > 0 {
+		progressPct = int((checkedTotal * 100) / requestTotal)
+	} else if targetsTotal > 0 {
+		progressPct = int((int64(targetsDone) * 100) / int64(targetsTotal))
+	}
+
+	status := strings.ToLower(strings.TrimSpace(string(meta.Status)))
+	if status == string(domain.ScanStatusCompleted) {
+		progressPct = 100
+		if targetsTotal > 0 {
+			targetsDone = targetsTotal
+		}
+	}
+
+	if targetsTotal > 0 && targetsDone > targetsTotal {
+		targetsDone = targetsTotal
+	}
+	if progressPct < 0 {
+		progressPct = 0
+	}
+	if progressPct > 100 {
+		progressPct = 100
+	}
+
+	return progressPct, targetsDone, targetsTotal
 }

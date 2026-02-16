@@ -45,5 +45,6 @@ export function createState() {
 
         verbose: false,
         scans: [],
+        scanProgressByScan: new Map(),
     };
 }

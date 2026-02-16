@@ -35,9 +35,84 @@ export function createUI(state) {
         }, 75);
     }
 
+    let scansRenderTimer = null;
+    let scansRenderDeferredUntil = 0;
+    function deferScansRender(ms = 350) {
+        const until = Date.now() + Math.max(0, Number(ms) || 0);
+        if (until > scansRenderDeferredUntil) scansRenderDeferredUntil = until;
+    }
+
+    function scheduleScansRender(delayMs = 120) {
+        if (scansRenderTimer) return;
+        scansRenderTimer = setTimeout(() => {
+            scansRenderTimer = null;
+            const now = Date.now();
+            if (now < scansRenderDeferredUntil) {
+                scheduleScansRender(Math.max(30, scansRenderDeferredUntil - now + 20));
+                return;
+            }
+            renderScansList();
+        }, Math.max(0, Number(delayMs) || 0));
+    }
+
     function setConn(text) {
         const c = el("conn");
         if (c) c.textContent = text;
+    }
+
+    let helpTipEl = null;
+    let helpTipTimer = null;
+    function hideHelpTip() {
+        if (helpTipTimer) {
+            clearTimeout(helpTipTimer);
+            helpTipTimer = null;
+        }
+        if (helpTipEl && helpTipEl.parentNode) {
+            helpTipEl.parentNode.removeChild(helpTipEl);
+        }
+        helpTipEl = null;
+    }
+
+    function showHelpTip(targetEl, msg) {
+        if (!targetEl || !msg) return;
+        if (!helpTipEl) {
+            helpTipEl = document.createElement("div");
+            helpTipEl.className = "fixed z-50 max-w-xs rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 shadow-lg";
+            helpTipEl.style.pointerEvents = "none";
+            document.body.appendChild(helpTipEl);
+        }
+        helpTipEl.textContent = String(msg);
+
+        const r = targetEl.getBoundingClientRect();
+        const top = (r.top > 60) ? (r.top - 34) : (r.bottom + 8);
+        const left = Math.min(
+            Math.max(8, r.left - 8),
+            Math.max(8, window.innerWidth - 320)
+        );
+
+        helpTipEl.style.top = `${Math.round(top)}px`;
+        helpTipEl.style.left = `${Math.round(left)}px`;
+
+        if (helpTipTimer) clearTimeout(helpTipTimer);
+        helpTipTimer = setTimeout(() => hideHelpTip(), 3500);
+    }
+
+    function bindHelpTooltips() {
+        document.addEventListener("click", (e) => {
+            const raw = e.target;
+            const base = (raw && raw.nodeType === 3) ? raw.parentElement : raw;
+            const t = base?.closest?.(".cursor-help[title]");
+            if (!t) return;
+            const msg = String(t.getAttribute("title") || "").trim();
+            if (!msg) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showHelpTip(t, msg);
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") hideHelpTip();
+        });
     }
 
     function updateBadges() {
@@ -97,6 +172,8 @@ export function createUI(state) {
         const showStatus = orphaned ? "stopped" : (it.status || "-");
 
         const targetsCount = (it.targetsCount ?? (Array.isArray(it.targets) ? it.targets.length : 0));
+        const progressPctRaw = Number.parseInt(String(it.progressPct ?? it.progressPercent ?? 0), 10);
+        const progressPct = Number.isFinite(progressPctRaw) ? Math.max(0, Math.min(100, progressPctRaw)) : 0;
         const tags = Array.isArray(it.tags) ? it.tags.join(", ") : (it.tag ? String(it.tag) : "");
         const started = fmtWhen(it.startedAt);
 
@@ -104,6 +181,7 @@ export function createUI(state) {
             `Status: ${showStatus}`,
             `Started: ${started}`,
             `Targets: ${String(targetsCount ?? 0)}`,
+            `Progress: ${String(progressPct)}%`,
             tags ? `Tags: ${tags}` : "",
             `Findings: ${String(it.totalFindings ?? 0)}`,
             `Errors: ${String(it.totalErrors ?? 0)}`,
@@ -143,8 +221,16 @@ export function createUI(state) {
         requestLog.bindRefreshLogs(onRefresh);
     }
 
-    function bindScansUI({ onRefresh, onSelect, onAction } = {}) {
-        scans.bindScansUI({ onRefresh, onSelect, onAction });
+    function bindScansUI({ onRefresh, onSelect, onAction, onInteract } = {}) {
+        scans.bindScansUI({
+            onRefresh,
+            onSelect,
+            onAction,
+            onInteract: () => {
+                deferScansRender(350);
+                onInteract?.();
+            },
+        });
     }
 
     function bindFindingsPager({ onFirst, onPrev, onNext, onReload, onLimit } = {}) {
@@ -155,9 +241,13 @@ export function createUI(state) {
         bindPanelsPersist();
     }
 
+    bindHelpTooltips();
+
     return {
         scheduleProbeRender,
         scheduleFindingsRender,
+        scheduleScansRender,
+        deferScansRender,
 
         setConn,
         updateBadges,

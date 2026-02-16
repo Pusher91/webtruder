@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/Pusher91/webtruder/internal/domain"
 	"github.com/Pusher91/webtruder/internal/scanner"
@@ -22,6 +23,7 @@ type Server struct {
 	scanRepo          *store.ScanRepo
 	engine            *scanner.Engine
 	publicIPv4Enabled bool
+	version           string
 }
 
 func New() *Server { return NewWithDataDir("webtruder_data") }
@@ -41,6 +43,7 @@ func NewWithDataDir(dataDir string) *Server {
 		broker:    newBroker(),
 		wordlists: ws,
 		scanRepo:  store.NewScanRepo(dataDir, ss),
+		version:   "dev",
 	}
 
 	s.engine = scanner.New(ws, s.scanRepo, s)
@@ -51,6 +54,17 @@ func (s *Server) SetPublicIPv4Enabled(v bool) {
 	if s != nil {
 		s.publicIPv4Enabled = v
 	}
+}
+
+func (s *Server) SetVersion(v string) {
+	if s == nil {
+		return
+	}
+	v = strings.TrimSpace(v)
+	if v == "" {
+		v = "dev"
+	}
+	s.version = v
 }
 
 func (s *Server) Routes() http.Handler {

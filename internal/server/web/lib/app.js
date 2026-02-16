@@ -14,6 +14,12 @@ const state = createState();
 const ui = createUI(state);
 const data = createData(state, apiFetch);
 
+function reportNonFatal(context, err) {
+    console.error(err);
+    const msg = String(err?.message || "").trim() || "request failed";
+    ui.setConn(`error: ${context} (${msg})`);
+}
+
 async function refreshNetInfo() {
     try {
         const info = await data.refreshNetInfo();
@@ -32,11 +38,15 @@ async function loadFindingsFirstPageAndRender() {
 function updateLogTailForScan(scanId) {
     const it = (state.scans || []).find((x) => x.id === scanId);
     const isActive = !!(it && it.active && (String(it.status).toLowerCase() === "running" || String(it.status).toLowerCase() === "paused"));
-    if (isActive) data.startLogTail(() => ui.scheduleProbeRender());
+    if (isActive) data.startLogTail(() => ui.scheduleProbeRender(), (err) => reportNonFatal("log tail", err));
     else data.stopLogTail();
 }
 
 async function selectScan(scanId) {
+    try {
+        document.dispatchEvent(new CustomEvent("scan_selected", { detail: { scanId } }));
+    } catch {}
+
     data.stopLogTail();
     ui.clearScanUI();
 
@@ -109,13 +119,21 @@ ui.bindServerRowSelection(async (target) => {
     state.selectedTarget = target;
     ui.renderServersTable();
     ui.renderRequestLog();
-    await data.refreshLogs();
-    ui.renderRequestLog();
+    try {
+        await data.refreshLogs();
+        ui.renderRequestLog();
+    } catch (err) {
+        reportNonFatal("refresh logs", err);
+    }
 });
 
 ui.bindRefreshLogs(async () => {
-    await data.refreshLogs();
-    ui.scheduleProbeRender();
+    try {
+        await data.refreshLogs();
+        ui.scheduleProbeRender();
+    } catch (err) {
+        reportNonFatal("refresh logs", err);
+    }
 });
 
 ui.bindScansUI({
@@ -144,7 +162,7 @@ ui.bindScansUI({
                 return;
             }
 
-            const items = await data.refreshScansList().catch(() => []);
+            const items = await data.refreshScansList();
             ui.renderScansList();
 
             if (action === "delete" && state.scanId === scanId) {
@@ -163,7 +181,7 @@ ui.bindScansUI({
             }
 
             if (state.scanId === scanId) {
-                await data.loadScanState(scanId).catch(() => {});
+                await data.loadScanState(scanId);
                 ui.renderServersTable();
                 ui.renderRunningPanel();
                 ui.updateBadges();
@@ -186,15 +204,19 @@ startSSE({
     ui,
     data,
     onScanDone: async () => {
-        await data.refreshScansList().catch(() => {});
-        ui.renderScansList();
+        try {
+            await data.refreshScansList();
+            ui.renderScansList();
 
-        state.findingsMode = "paged";
-        await data.loadFindingsFirstPage({ limit: state.findingsLimit }).catch(() => {});
-        ui.renderFindingsTable();
-        ui.renderFindingsPager();
+            state.findingsMode = "paged";
+            await data.loadFindingsFirstPage({ limit: state.findingsLimit });
+            ui.renderFindingsTable();
+            ui.renderFindingsPager();
 
-        if (state.scanId) updateLogTailForScan(state.scanId);
+            if (state.scanId) updateLogTailForScan(state.scanId);
+        } catch (err) {
+            reportNonFatal("scan completion refresh", err);
+        }
     },
 });
 
@@ -202,9 +224,13 @@ refreshNetInfo();
 setInterval(() => refreshNetInfo(), 30000);
 
 (async () => {
-    const items = await data.refreshScansList().catch(() => []);
-    ui.renderScansList();
+    try {
+        const items = await data.refreshScansList();
+        ui.renderScansList();
 
-    const def = data.pickDefaultScanId(items);
-    if (def) await selectScan(def);
+        const def = data.pickDefaultScanId(items);
+        if (def) await selectScan(def);
+    } catch (err) {
+        reportNonFatal("initial load", err);
+    }
 })();

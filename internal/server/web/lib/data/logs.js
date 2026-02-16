@@ -66,11 +66,11 @@ export function createLogsData(state, apiFetch) {
         }
     }
 
-    function startLogTail(onTick) {
+    function startLogTail(onTick, onError) {
         stopLogTail();
-        refreshLogs().then(() => onTick?.()).catch(() => {});
+        refreshLogs().then(() => onTick?.()).catch((err) => onError?.(err));
         logTailTimer = setInterval(() => {
-            refreshLogs().then(() => onTick?.()).catch(() => {});
+            refreshLogs().then(() => onTick?.()).catch((err) => onError?.(err));
         }, 750);
     }
 
