@@ -2,6 +2,7 @@ import { apiFetch } from "../api.js";
 
 const PROXY_KEY = "webtruder.proxy";
 const el = (id) => document.getElementById(id);
+let startInFlight = false;
 
 function unwrap(resp) {
     return resp?.data ?? resp ?? {};
@@ -53,6 +54,22 @@ function setWordlistStatus(text, isError = false) {
     out.textContent = text;
 }
 
+function setStartBusy(busy) {
+    const btn = el("startBtn");
+    if (!btn) return;
+    if (busy) {
+        btn.dataset.prevText = btn.textContent || "Start scan";
+        btn.disabled = true;
+        btn.classList.add("opacity-60", "cursor-not-allowed");
+        btn.textContent = "Starting...";
+        return;
+    }
+    btn.disabled = false;
+    btn.classList.remove("opacity-60", "cursor-not-allowed");
+    if (btn.dataset.prevText) btn.textContent = btn.dataset.prevText;
+    delete btn.dataset.prevText;
+}
+
 async function uploadWordlistOnce(file) {
     const fd = new FormData();
     fd.append("file", file, file.name);
@@ -81,10 +98,14 @@ async function ensureWordlistId() {
 }
 
 async function startScan() {
+    if (startInFlight) return;
+
     const launchForm = el("launchForm");
     const launchMsg = el("launchMsg");
     if (!launchForm || !launchMsg) return;
 
+    startInFlight = true;
+    setStartBusy(true);
     clearFormErrors(launchForm);
 
     try {
@@ -129,6 +150,9 @@ async function startScan() {
         }
         launchMsg.className = "text-xs text-red-400";
         launchMsg.textContent = err?.message || "request failed";
+    } finally {
+        startInFlight = false;
+        setStartBusy(false);
     }
 }
 

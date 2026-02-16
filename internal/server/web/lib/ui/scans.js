@@ -112,7 +112,9 @@ ${canDelete ? btn("delete", "Delete") : ""}
 
         scanRows?.addEventListener("click", async (e) => {
             onInteract?.();
-            const btnEl = e.target.closest("button[data-action][data-scanid]");
+            const raw = e.target;
+            const base = (raw && raw.nodeType === 3) ? raw.parentElement : raw;
+            const btnEl = base?.closest?.("button[data-action][data-scanid]");
             if (btnEl) {
                 e.preventDefault();
                 const action = btnEl.getAttribute("data-action") || "";
@@ -121,7 +123,7 @@ ${canDelete ? btn("delete", "Delete") : ""}
                 return;
             }
 
-            const tr = e.target.closest("tr[data-scanid]");
+            const tr = base?.closest?.("tr[data-scanid]");
             if (!tr) return;
             const id = tr.getAttribute("data-scanid") || "";
             if (!id) return;

@@ -59,6 +59,11 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
         return (state.scans || []).find((x) => x && x.id === key) || null;
     }
 
+    function isEndedScan(scanId) {
+        const it = findScan(scanId);
+        return !!it && it.active === false;
+    }
+
     function upsertScan(scanId, patch = {}) {
         const key = normalizeScanId(scanId);
         if (!key) return null;
@@ -122,10 +127,16 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
         const host = String(target || "").trim();
         if (!id || !host) return;
 
-        const it = upsertScan(id, { active: true });
+        const existing = findScan(id);
+        if (existing && existing.active === false) {
+            // Ignore late progress events after a scan has already ended.
+            return;
+        }
+
+        const it = existing || upsertScan(id, { active: true, status: "running" });
         if (!it) return;
         const stRaw = String(it.status || "").toLowerCase();
-        if (stRaw !== "completed" && stRaw !== "stopped") {
+        if (stRaw === "" || stRaw === "running") {
             it.status = "running";
         }
 
@@ -231,6 +242,7 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
 
     es.addEventListener("host_started", (e) => {
         const m = JSON.parse(e.data || "{}");
+        if (isEndedScan(m?.scanId)) return;
         updateScanHostProgress(m?.scanId, m?.target, { checked: 0, total: m?.total, percent: 0 });
         ui.scheduleScansRender();
 
@@ -248,6 +260,7 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
 
     es.addEventListener("host_progress", (e) => {
         const m = JSON.parse(e.data || "{}");
+        if (isEndedScan(m?.scanId)) return;
         updateScanHostProgress(m?.scanId, m?.target, {
             percent: m?.percent,
             checked: m?.checked,
@@ -275,6 +288,7 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
     es.addEventListener("finding", (e) => {
         const m = JSON.parse(e.data || "{}");
         const scanId = normalizeScanId(m?.scanId);
+        if (isEndedScan(scanId)) return;
         if (scanId) {
             const it = upsertScan(scanId);
             if (it) it.totalFindings = (Number(it.totalFindings) || 0) + 1;
@@ -309,6 +323,7 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
     es.addEventListener("probe_error", (e) => {
         const m = JSON.parse(e.data || "{}");
         const scanId = normalizeScanId(m?.scanId);
+        if (isEndedScan(scanId)) return;
         if (scanId) {
             const it = upsertScan(scanId);
             if (it) it.totalErrors = (Number(it.totalErrors) || 0) + 1;
@@ -343,6 +358,7 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
         if (!state.verbose) return;
 
         const m = JSON.parse(e.data || "{}");
+        if (isEndedScan(m?.scanId)) return;
         if (!isEventForCurrentScan(m)) return;
         if (!m.target) return;
 
@@ -369,14 +385,11 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
         const errMsg = String(m?.error || "").trim();
 
         if (scanId) {
-            const it = upsertScan(scanId, { active: false });
+            const it = findScan(scanId) || upsertScan(scanId);
             if (it) {
+                it.active = false;
                 const stRaw = String(it.status || "").toLowerCase();
-                if (!errMsg) {
-                    if (stRaw === "running" || stRaw === "paused" || stRaw === "") it.status = "completed";
-                    it.progressPct = 100;
-                    if ((it.targetsTotal || 0) > 0) it.targetsDone = it.targetsTotal;
-                } else if (stRaw === "running" || stRaw === "paused" || stRaw === "") {
+                if (errMsg && (stRaw === "running" || stRaw === "paused" || stRaw === "")) {
                     it.status = "stopped";
                 }
             }
@@ -394,8 +407,15 @@ export function startSSE({ state, ui, data, onScanDone } = {}) {
         if (forPreferred) preferredScanId = "";
 
         data.refreshLogs().catch(() => {});
-        if (errMsg) ui.setConn(`connected - scan failed (${errMsg})`);
-        else ui.setConn("connected - scan complete");
+        if (errMsg) {
+            ui.setConn(`connected - scan failed (${errMsg})`);
+        } else {
+            const it = scanId ? findScan(scanId) : null;
+            const stRaw = String(it?.status || "").toLowerCase();
+            if (stRaw === "stopped") ui.setConn("connected - scan stopped");
+            else if (stRaw === "completed") ui.setConn("connected - scan complete");
+            else ui.setConn("connected - scan finished");
+        }
         ui.renderServersTable();
         ui.renderRunningPanel();
         ui.updateBadges();

@@ -140,7 +140,9 @@ export function createServersPanel(state) {
 
     function bindServerRowSelection(onSelectTarget) {
         el("serverRows")?.addEventListener("click", (e) => {
-            const tr = e.target.closest("tr[data-target]");
+            const raw = e.target;
+            const base = (raw && raw.nodeType === 3) ? raw.parentElement : raw;
+            const tr = base?.closest?.("tr[data-target]");
             if (!tr) return;
             const target = decodeURIComponent(tr.getAttribute("data-target") || "");
             onSelectTarget?.(target);

@@ -138,13 +138,21 @@ ui.bindRefreshLogs(async () => {
 
 ui.bindScansUI({
     onRefresh: async () => {
-        await data.refreshScansList();
-        ui.renderScansList();
-        if (state.scanId) updateLogTailForScan(state.scanId);
+        try {
+            await data.refreshScansList();
+            ui.renderScansList();
+            if (state.scanId) updateLogTailForScan(state.scanId);
+        } catch (err) {
+            reportNonFatal("refresh scans", err);
+        }
     },
     onSelect: async (scanId) => {
-        await selectScan(scanId);
-        ui.renderScansList();
+        try {
+            await selectScan(scanId);
+            ui.renderScansList();
+        } catch (err) {
+            reportNonFatal("select scan", err);
+        }
     },
     onAction: async (action, scanId) => {
         try {
